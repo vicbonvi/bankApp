@@ -130,7 +130,7 @@ btnLogin.addEventListener('click', function (e) {
   const username = inputLoginUsername.value;
   const pin = Number(inputLoginPin.value);
   const currentAccount = accounts.find(acc => acc.username === username);
-  if (currentAccount.pin === pin) {
+  if (currentAccount && currentAccount.pin === pin) {
     displayMovements(account1.movements);
     calcDisplayBalance(account1);
     displaySummary(account1);
@@ -138,5 +138,11 @@ btnLogin.addEventListener('click', function (e) {
       currentAccount.owner.split(' ')[0]
     }`;
     containerApp.style.opacity = 1;
+    inputLoginUsername.value = '';
+    inputLoginPin.value = '';
+    // quitar foco si lo tiene:
+    inputLoginPin.blur();
+  } else {
+    console.log('pin incorrecto o usuario desconocido');
   }
 });
