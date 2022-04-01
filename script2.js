@@ -122,15 +122,21 @@ function displaySummary(acc) {
 
   labelSumInterest.textContent = `${interest}€`;
 }
-displayMovements(account1.movements);
-calcDisplayBalance(account1);
-displaySummary(account1);
 
 btnLogin.addEventListener('click', function (e) {
   console.log('me han pulsado');
   e.preventDefault();
   // obtener la cuenta que me interesa
   const username = inputLoginUsername.value;
-  const pin = inputLoginPin.value;
-  const currentAccount = account.find(acc => acc.username === username);
+  const pin = Number(inputLoginPin.value);
+  const currentAccount = accounts.find(acc => acc.username === username);
+  if (currentAccount.pin === pin) {
+    displayMovements(account1.movements);
+    calcDisplayBalance(account1);
+    displaySummary(account1);
+    labelWelcome.textContent = `Bienvenido ${
+      currentAccount.owner.split(' ')[0]
+    }`;
+    containerApp.style.opacity = 1;
+  }
 });
