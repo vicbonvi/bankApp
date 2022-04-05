@@ -53,6 +53,12 @@ const inputTransferAmount = document.querySelector('.form__input--amount');
 const inputLoanAmount = document.querySelector('.form__input--loan-amount');
 const inputCloseUsername = document.querySelector('.form__input--user');
 const inputClosePin = document.querySelector('.form__input--pin');
+
+// global variables
+let currentAccount;
+let timer;
+let sortOrder = 'afterbegin';
+
 const displayMovements = function (movements) {
   containerMovements.innerHTML = '';
   movements.forEach((mov, i) => {
@@ -65,8 +71,8 @@ const displayMovements = function (movements) {
         <div class="movements__value">${mov}€</div>
       </div>
     `;
-    containerMovements.innerHTML += html;
-    containerMovements.insertAdjacentHTML('afterbegin', html);
+    // containerMovements.innerHTML += html;
+    containerMovements.insertAdjacentHTML(sortOrder, html);
   });
 };
 /* función que inserta un campo nuevo en lo  accounts, llamado username que tenga las iniciales
@@ -120,8 +126,16 @@ function displaySummary(acc) {
     .filter(interest => interest > 1)
     .reduce((acc, cur) => acc + cur, 0);
 
-  labelSumInterest.textContent = `${interest}€`;
+  labelSumInterest.textContent = interest.toFixed(2) + '€';
 }
+
+const updateUI = function () {
+  clearInterval(timer);
+  startLogOutTimer();
+  displayMovements(currentAccount.movements);
+  calcDisplayBalance(currentAccount);
+  displaySummary(currentAccount);
+};
 
 btnLogin.addEventListener('click', function (e) {
   console.log('me han pulsado');
@@ -131,9 +145,7 @@ btnLogin.addEventListener('click', function (e) {
   const pin = Number(inputLoginPin.value);
   const currentAccount = accounts.find(acc => acc.username === username);
   if (currentAccount && currentAccount.pin === pin) {
-    displayMovements(account1.movements);
-    calcDisplayBalance(account1);
-    displaySummary(account1);
+    updateUI();
     labelWelcome.textContent = `Bienvenido ${
       currentAccount.owner.split(' ')[0]
     }`;
@@ -146,3 +158,119 @@ btnLogin.addEventListener('click', function (e) {
     console.log('pin incorrecto o usuario desconocido');
   }
 });
+
+const logout = function () {
+  currentAccount = null;
+  containerApp.style.opacity = 1;
+  labelWelcome.textContent = `Log in to get started`;
+};
+
+btnSort.addEventListener('click', function (e) {
+  e.preventDefault();
+  sortOrder = sortOrder === 'afterbegin' ? 'beforeend' : 'afterbegin';
+  updateUI();
+});
+
+btnTransfer.addEventListener('click', function (e) {
+  console.log('solicitada transferencia');
+  e.preventDefault();
+  // comprobar las variables que necesito
+  const destinyUsername = inputTransferTo.value;
+  const amount = Number(inputTransferAmount.value);
+  console.log(amount, destinyUsername);
+  const destinyAccount = accounts.find(acc => acc.username === destinyUsername);
+  //  condiciones para transferir
+  /* valor positivo, usuario destino existente
+  balance actual >= transferencia
+  usuario destino != usuario actual */
+
+  if (
+    amount > 0 &&
+    destinyAccount &&
+    currentAccount.balance >= amount &&
+    destinyAccount.username !== currentAccount.username
+  ) {
+    currentAccount.movements.push(-amount);
+    destinyAccount.movements.push(amount);
+    updateUI();
+  } else {
+    console.log('error en transferencia');
+  }
+});
+
+btnClose.addEventListener('click', function (e) {
+  e.preventDefault();
+  console.log(
+    `cerrar cuenta de ${currentAccount.username} con pin ${currentAccount.pin}`
+  );
+  const user = inputCloseUsername.value;
+  const pin = Number(inputClosePin.value);
+  if (user === currentAccount.username && pin === currentAccount.pin) {
+    const index = accounts.findIndex(acc => acc.username === user);
+    console.log(`elemento a eliminar ${index}`, accounts[index]);
+    accounts.splice(index, 1);
+    console.log(accounts);
+    inputCloseUsername.value = inputClosePin.value = '';
+    containerApp.style.opacity = 0;
+  } else {
+    console.log('No se puede eliminar la cuenta');
+  }
+});
+// temporal login
+
+currentAccount = account1;
+updateUI();
+containerApp.style.opacity = 1;
+
+/* 
+  vamos a necesitar para los prestamos
+  método some o every (parecidos al find, pero permiten evaluar condiciones)
+  una constante que sea el valor a evaluar (el 10% del importe del prestamo solicitado)
+  
+*/
+btnLoan.addEventListener('click', function (e) {
+  e.preventDefault();
+  console.log('Préstamo solicitado');
+  const amount = Number(inputLoanAmount.value);
+  const minDepositRequired = amount * 0.1;
+  if (
+    amount > 0 &&
+    currentAccount.movements.some(mov => mov > minDepositRequired)
+  ) {
+    currentAccount.movements.push(amount);
+    console.log('Préstamo concedido');
+    updateUI();
+  } else {
+    console.log('Préstamo denegado');
+  }
+  inputLoanAmount.value = '';
+  inputLoanAmount.blur();
+});
+
+//  prueba sacar el balance total del banco
+//
+// const globalBankBalance = accounts
+//   .map(acc => acc.movements)
+//   .flat()
+//   .reduce((acc, cur) => acc + cur, 0);
+// console.log(globalBankBalance);
+
+// timer
+
+function startLogOutTimer() {
+  let time = 300;
+  const printTime = () => {
+    const min = Math.trunc(time / 60);
+    const sec = String(time % 60).padStart(2, 0);
+    labelTimer.textContent = `${min}:${sec}`;
+  };
+  printTime(time);
+  timer = setInterval(() => {
+    time -= 1;
+    if (time === 0) {
+      clearInterval(timer);
+      logout();
+    }
+    printTime(time);
+  }, 1000);
+}
